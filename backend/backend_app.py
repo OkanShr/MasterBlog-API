@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request, abort
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -10,9 +10,67 @@ POSTS = [
 ]
 
 
+def generate_new_id():
+    if POSTS:
+        return max(post['id'] for post in POSTS) + 1
+    else:
+        return 1
+
+
 @app.route('/api/posts', methods=['GET'])
 def get_posts():
     return jsonify(POSTS)
+
+
+@app.route('/api/posts', methods=['POST'])
+def add_post():
+    data = request.get_json()
+
+    # Validate input
+    if not data or 'title' not in data or 'content' not in data:
+        missing_fields = []
+        if 'title' not in data:
+            missing_fields.append('title')
+        if 'content' not in data:
+            missing_fields.append('content')
+        return jsonify(
+            {"error": f"Missing fields: {', '.join(missing_fields)}"}), 400
+
+    # Generate new ID and create new post
+    new_post_id = generate_new_id()
+    new_post = {
+        "id": new_post_id,
+        "title": data['title'],
+        "content": data['content']
+    }
+    POSTS.append(new_post)
+
+    return jsonify(new_post), 201
+
+
+@app.route('/api/posts/<int:id>', methods=['DELETE'])
+def delete_post(id):
+    post = next((post for post in POSTS if post['id'] == id), None)
+    if post is None:
+        return jsonify({"error": "Post not found"}), 404
+
+    POSTS.remove(post)
+    return jsonify(
+        {"message": f"Post with id {id} has been deleted successfully."}), 200
+
+
+@app.route('/api/posts/<int:id>', methods=['PUT'])
+def update_post(id):
+    data = request.get_json()
+    post = next((post for post in POSTS if post['id'] == id), None)
+    if post is None:
+        return jsonify({"error": "Post not found"}), 404
+
+    # Update title and content if provided, otherwise keep current values
+    post['title'] = data.get('title', post['title'])
+    post['content'] = data.get('content', post['content'])
+
+    return jsonify(post), 200
 
 
 if __name__ == '__main__':
