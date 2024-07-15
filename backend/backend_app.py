@@ -19,26 +19,33 @@ def generate_new_id():
 
 @app.route('/api/posts', methods=['GET'])
 def get_posts():
+    # Extract query parameters for sorting
     sort_field = request.args.get('sort')
     sort_direction = request.args.get('direction')
+    page = request.args.get('page', default=1, type=int)
+    per_page = request.args.get('per_page', default=10, type=int)
 
+    # Validate and sort
     if sort_field:
         if sort_field not in ['title', 'content']:
-            return jsonify({
-                               "error": "Invalid sort field. Must be 'title' "
-                                        "or 'content'."}), 400
+            return jsonify({"error": "Invalid sort field. Must be 'title' or "
+                                     "'content'."}), 400
         if sort_direction not in ['asc', 'desc']:
-            return jsonify({
-                               "error": "Invalid sort direction. Must be "
-                                        "'asc' or 'desc'."}), 400
-
-        reverse = True if sort_direction == 'desc' else False
+            return jsonify({"error": "Invalid sort direction. Must be 'asc' "
+                                     "or 'desc'."}), 400
+        reverse = sort_direction == 'desc'
         sorted_posts = sorted(POSTS, key=lambda post: post[sort_field],
                               reverse=reverse)
     else:
         sorted_posts = POSTS
 
-    return jsonify(sorted_posts)
+    # Implement pagination
+    start = (page - 1) * per_page
+    end = start + per_page
+    paginated_posts = sorted_posts[start:end]
+
+    return jsonify(paginated_posts)
+
 
 
 @app.route('/api/posts', methods=['POST'])
