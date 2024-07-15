@@ -25,10 +25,12 @@ def get_posts():
     if sort_field:
         if sort_field not in ['title', 'content']:
             return jsonify({
-                               "error": "Invalid sort field. Must be 'title' or 'content'."}), 400
+                               "error": "Invalid sort field. Must be 'title' "
+                                        "or 'content'."}), 400
         if sort_direction not in ['asc', 'desc']:
             return jsonify({
-                               "error": "Invalid sort direction. Must be 'asc' or 'desc'."}), 400
+                               "error": "Invalid sort direction. Must be "
+                                        "'asc' or 'desc'."}), 400
 
         reverse = True if sort_direction == 'desc' else False
         sorted_posts = sorted(POSTS, key=lambda post: post[sort_field],
