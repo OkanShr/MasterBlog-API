@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, abort
+from flask import Flask, jsonify, request
 from flask_cors import CORS
 
 app = Flask(__name__)
@@ -19,7 +19,24 @@ def generate_new_id():
 
 @app.route('/api/posts', methods=['GET'])
 def get_posts():
-    return jsonify(POSTS)
+    sort_field = request.args.get('sort')
+    sort_direction = request.args.get('direction')
+
+    if sort_field:
+        if sort_field not in ['title', 'content']:
+            return jsonify({
+                               "error": "Invalid sort field. Must be 'title' or 'content'."}), 400
+        if sort_direction not in ['asc', 'desc']:
+            return jsonify({
+                               "error": "Invalid sort direction. Must be 'asc' or 'desc'."}), 400
+
+        reverse = True if sort_direction == 'desc' else False
+        sorted_posts = sorted(POSTS, key=lambda post: post[sort_field],
+                              reverse=reverse)
+    else:
+        sorted_posts = POSTS
+
+    return jsonify(sorted_posts)
 
 
 @app.route('/api/posts', methods=['POST'])
