@@ -1,9 +1,14 @@
-from flask import Flask, jsonify, request
+from flask import Flask, request, jsonify
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
 from flask_cors import CORS
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__)
-CORS(app)  # This will enable CORS for all routes
+CORS(app)
+app.config['JWT_SECRET_KEY'] = 'MySecretKey'
+jwt = JWTManager(app)
 
+users = {}
 POSTS = [
     {"id": 1, "title": "First post", "content": "This is the first post."},
     {"id": 2, "title": "Second post", "content": "This is the second post."},
@@ -17,6 +22,42 @@ def generate_new_id():
         return 1
 
 
+@app.route('/register', methods=['POST'])
+def register():
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
+
+    if not username or not password:
+        return jsonify({"error": "Missing username or password"}), 400
+
+    if username in users:
+        return jsonify({"error": "User already exists"}), 400
+
+    hashed_password = generate_password_hash(password)
+    users[username] = hashed_password
+
+    return jsonify({"message": "User registered successfully"}), 201
+
+
+@app.route('/login', methods=['POST'])
+def login():
+    data = request.get_json()
+    username = data.get('username')
+    password = data.get('password')
+
+    if not username or not password:
+        return jsonify({"error": "Missing username or password"}), 400
+
+    hashed_password = users.get(username)
+    if not hashed_password or not check_password_hash(hashed_password, password):
+        return jsonify({"error": "Invalid username or password"}), 401
+
+    access_token = create_access_token(identity=username)
+    return jsonify(access_token=access_token), 200
+
+
+@jwt_required()
 @app.route('/api/posts', methods=['GET'])
 def get_posts():
     # Extract query parameters for sorting
@@ -47,7 +88,7 @@ def get_posts():
     return jsonify(paginated_posts)
 
 
-
+@jwt_required()
 @app.route('/api/posts', methods=['POST'])
 def add_post():
     data = request.get_json()
@@ -74,6 +115,7 @@ def add_post():
     return jsonify(new_post), 201
 
 
+@jwt_required()
 @app.route('/api/posts/<int:id>', methods=['DELETE'])
 def delete_post(id):
     post = next((post for post in POSTS if post['id'] == id), None)
@@ -85,6 +127,7 @@ def delete_post(id):
         {"message": f"Post with id {id} has been deleted successfully."}), 200
 
 
+@jwt_required()
 @app.route('/api/posts/<int:id>', methods=['PUT'])
 def update_post(id):
     data = request.get_json()
@@ -99,6 +142,7 @@ def update_post(id):
     return jsonify(post), 200
 
 
+@jwt_required()
 @app.route('/api/posts/search', methods=['GET'])
 def search_posts():
     title_query = request.args.get('title')
