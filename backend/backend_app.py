@@ -1,10 +1,25 @@
 from flask import Flask, request, jsonify
-from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity
+from flask_jwt_extended import JWTManager, create_access_token, jwt_required, \
+    get_jwt_identity
 from flask_cors import CORS
 from werkzeug.security import generate_password_hash, check_password_hash
+from flask_swagger_ui import get_swaggerui_blueprint
+
+SWAGGER_URL = "/api/docs"
+# HTTP://localhost:5002/api/docs
+API_URL = "/static/masterblog.json"
 
 app = Flask(__name__)
 CORS(app)
+swagger_ui_blueprint = get_swaggerui_blueprint(
+    SWAGGER_URL,
+    API_URL,
+    config={
+        'app_name': 'Masterblog API'
+    }
+)
+
+app.register_blueprint(swagger_ui_blueprint, url_prefix=SWAGGER_URL)
 app.config['JWT_SECRET_KEY'] = 'MySecretKey'
 jwt = JWTManager(app)
 
@@ -50,7 +65,8 @@ def login():
         return jsonify({"error": "Missing username or password"}), 400
 
     hashed_password = users.get(username)
-    if not hashed_password or not check_password_hash(hashed_password, password):
+    if not hashed_password or not check_password_hash(hashed_password,
+                                                      password):
         return jsonify({"error": "Invalid username or password"}), 401
 
     access_token = create_access_token(identity=username)
